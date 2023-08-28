@@ -46,7 +46,7 @@ def init_data():
         else:
             search_str = f"{descr.strip()} Topics: {', '.join(topics)}."
         app.keys.append(search_str)
-    app.stransformer = STransformerZeroshotClassifier(os.environ["CLASSIFIER_MODEL"])
+    app.stransformer = STransformerZeroshotClassifier(app.keys, os.environ["CLASSIFIER_MODEL"])
     app.guidance_wrapper = GuidanceWrapper(model_id=os.environ["LLM_MODEL"])
 
 
@@ -64,7 +64,7 @@ async def process_query_async(request: Request):
 
 
 async def run_model_in_background(job_id: str, query: str):
-    key, _, idx = app.stransformer.classify(query, app.keys)
+    key, _, idx = app.stransformer.classify(query)
 
     func_def = app.definitions[idx]
     func_descr = app.descriptions[idx]
@@ -75,10 +75,13 @@ async def run_model_in_background(job_id: str, query: str):
         final_func_call = func_def[: func_def.index("(") + 1] + ")"
         try:
             res = eval(final_func_call)
-            res = res.to_dict(orient="dict") if isinstance(res, pd.DataFrame) else str(res)
-            results_store[job_id] = (
-                {"result": res} if res is not None else {"result": "Nothing returned."}
-            )
+            if isinstance(res, pd.DataFrame):
+                res = res.to_dict(orient="dict")
+            elif res is None:
+                res = "Nothing returned."
+            else:
+                res = str(res)
+            results_store[job_id] = {"result": res}
         except Exception as e:
             results_store[job_id] = {"error": "Error processing the query. Please try again!"}
         finally:
@@ -102,10 +105,13 @@ async def run_model_in_background(job_id: str, query: str):
     final_func_call = func_def[: func_def.index("(") + 1] + inner_func_str + ")"
     try:
         res = eval(final_func_call)
-        res = res.to_dict(orient="dict") if isinstance(res, pd.DataFrame) else str(res)
-        results_store[job_id] = (
-            {"result": res} if res is not None else {"result": "Nothing returned."}
-        )
+        if isinstance(res, pd.DataFrame):
+            res = res.to_dict(orient="dict")
+        elif res is None:
+            res = "Nothing returned."
+        else:
+            res = str(res)
+        results_store[job_id] = {"result": res}
     except Exception as e:
         results_store[job_id] = {"error": "Error processing the query. Please try again!"}
     finally:
