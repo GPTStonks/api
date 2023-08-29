@@ -4,7 +4,7 @@ FROM nvidia/cuda:11.7.1-devel-ubuntu22.04
 RUN apt update && apt install -y python3-pip python3-venv
 
 #Install graphical tool to avoid interaction
-RUN apt install -y libwebkit2gtk-4.0-dev
+RUN apt update && apt install -y libwebkit2gtk-4.0-dev
 
 # Install requirements.txt
 COPY ./requirements.txt /api/requirements.txt
